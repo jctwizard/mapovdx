@@ -108,9 +108,6 @@
     <ClCompile Include="ProcessShader.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="HBlurShader.cpp">
-      <Filter>Source Files\Shaders</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -188,9 +185,6 @@
     <ClInclude Include="ProcessShader.h">
       <Filter>Source Files\Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="HBlurShader.h">
-      <Filter>Source Files\Shaders</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -212,12 +206,6 @@
       <Filter>Source Files\Shaders\shaders</Filter>
     </FxCompile>
     <FxCompile Include="..\shaders\process_vs.hlsl">
-      <Filter>Source Files\Shaders\shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="..\shaders\hblur_ps.hlsl">
-      <Filter>Source Files\Shaders\shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="..\shaders\hblur_vs.hlsl">
       <Filter>Source Files\Shaders\shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -96,7 +96,6 @@
     <ClCompile Include="Console.cpp" />
     <ClCompile Include="CubeMesh.cpp" />
     <ClCompile Include="D3D.cpp" />
-    <ClCompile Include="HBlurShader.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Mapov.cpp" />
     <ClCompile Include="Light.cpp" />
@@ -125,7 +124,6 @@
     <ClInclude Include="Console.h" />
     <ClInclude Include="CubeMesh.h" />
     <ClInclude Include="D3D.h" />
-    <ClInclude Include="HBlurShader.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Mapov.h" />
     <ClInclude Include="Light.h" />
@@ -152,12 +150,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\shaders\colour_vs.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\shaders\hblur_ps.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </FxCompile>
-    <FxCompile Include="..\shaders\hblur_vs.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="..\shaders\process_ps.hlsl">

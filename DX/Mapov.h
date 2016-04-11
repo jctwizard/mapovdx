@@ -41,6 +41,7 @@ public:
 
 private:
 	bool Render();
+	void UpdateTilemap();
 	void GenerateTileData();
 	void AnalyseTileData(int x, int y);
 	int SumPixels(int tileX, int tileY);
@@ -58,11 +59,9 @@ private:
 	int screenWidth, screenHeight;
 	int outputWidth, outputHeight;
 	int tileSize;
-	int tilesX, tilesY, generatedTilesX, generatedTilesY;
+	int tilesX, tilesY, generatedTilesX, generatedTilesY, totalGeneratedTilesX, totalGeneratedTilesY;
 	int markovRadius;
 	int corrections;
-	bool justGenerated;
-	bool justCorrected;
 
 	CImg<int> originalTilemap;
 	CImg<int> tilemap;
@@ -78,6 +77,9 @@ private:
 	Texture* m_Texture;
 
 	int effectFlags;
+
+	int offsetX, minOffsetX, maxOffsetX;
+	int offsetY, minOffsetY, maxOffsetY;
 };
 
 #endif

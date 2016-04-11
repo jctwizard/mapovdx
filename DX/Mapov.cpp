@@ -9,11 +9,11 @@ Mapov::Mapov(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, 
 	this->screenWidth = screenWidth;
 	this->screenHeight = screenHeight;
 
-	justGenerated = false;
-	justCorrected = false;
+	offsetX = minOffsetX = maxOffsetX = 0;
+	offsetY = minOffsetY = maxOffsetY = 0;
 
 	// Create Mesh object
-	string filename = "../res/zelda_overworld.jpg";
+	string filename = "../res/pallet_town.png";
 	tileSize = 32;
 	outputWidth = 512;
 	outputHeight = 512;
@@ -35,8 +35,8 @@ Mapov::Mapov(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, 
 		outputHeight = tilemap.height();
 	}
 
-	generatedTilesX = outputWidth / tileSize;
-	generatedTilesY = outputHeight / tileSize;
+	generatedTilesX = totalGeneratedTilesX = outputWidth / tileSize;
+	generatedTilesY = totalGeneratedTilesY = outputHeight / tileSize;
 
 	GenerateTileData();
 
@@ -96,7 +96,7 @@ bool Mapov::Frame()
 	}
 
 	// Input
-	if (m_Input->isKeyDown(VK_SPACE) && !justGenerated)
+	if (m_Input->isKeyDown(VK_SPACE))
 	{
 		cout << "Begin generating" << endl;
 
@@ -104,53 +104,78 @@ bool Mapov::Frame()
 
 		DrawTileData();
 
-		justGenerated = true;
-	}
-	else
-	{
-		if (justGenerated)
-		{
-			justGenerated = false;
-		}
+		m_Input->SetKeyUp(VK_SPACE);
 	}
 	
-	if (m_Input->isKeyDown('C') && !justCorrected)
+	if (m_Input->isKeyDown('C'))
 	{
 		CorrectTileMap();
 
 		DrawTileData();
 
-		justCorrected = true;
-	}
-	else 
-	{
-		if (justCorrected)
-		{
-			justCorrected = false;
-		}
+		m_Input->SetKeyUp('C');
 	}
 
 	// Set effects
 	if (m_Input->isKeyDown('1'))
 	{
 		effectFlags |= EFFECT_BLUR;
+		m_Input->SetKeyUp('1');
 	}
 	if (m_Input->isKeyDown('2'))
 	{
 		effectFlags |= EFFECT_EDGEDETECT;
+		m_Input->SetKeyUp('2');
 	}
 	if (m_Input->isKeyDown('3'))
 	{
 		effectFlags |= EFFECT_POSTERISE;
+		m_Input->SetKeyUp('3');
 	}
 	if (m_Input->isKeyDown('4'))
 	{
 		effectFlags |= EFFECT_INVERT;
+		m_Input->SetKeyUp('4');
 	}
 	// Clear effects
 	if (m_Input->isKeyDown('0'))
 	{
 		effectFlags = EFFECT_NONE;
+		m_Input->SetKeyUp('0');
+	}
+
+	// Pan around
+	if (m_Input->isKeyDown(VK_LEFT))
+	{
+		offsetX--;
+
+		UpdateTilemap();
+
+		m_Input->SetKeyUp(VK_LEFT);
+	}
+	else if (m_Input->isKeyDown(VK_RIGHT))
+	{
+		offsetX++;
+
+		UpdateTilemap();
+
+		m_Input->SetKeyUp(VK_RIGHT);
+	}
+	if (m_Input->isKeyDown(VK_UP))
+	{
+		offsetY--;
+
+		UpdateTilemap();
+
+		m_Input->SetKeyUp(VK_UP);
+	}
+	else if (m_Input->isKeyDown(VK_DOWN))
+	{
+		offsetY++;
+
+		UpdateTilemap();
+
+		m_Input->SetKeyUp(VK_DOWN);
 	}
 
 	// Render the graphics.
@@ -193,6 +218,66 @@ bool Mapov::Render()
 	return true;
 }
 
+void Mapov::UpdateTilemap()
+{
+	if (generatedTilemap.size() == 0)
+	{
+		return;
+	}
+
+	if (offsetX < minOffsetX)
+	{
+		for (int newTile = 0; newTile < totalGeneratedTilesY; newTile++)
+		{
+			int currentTile = generatedTilemap.at(totalGeneratedTilesX * newTile + newTile);
+			generatedTilemap.insert(generatedTilemap.begin() + totalGeneratedTilesX * newTile + newTile, GenerateNextTile(currentTile, -1, 0));
+		}
+
+		totalGeneratedTilesX++;
+
+		minOffsetX = offsetX;
+	}
+	else if (offsetX > maxOffsetX)
+	{
+		for (int newTile = 0; newTile < totalGeneratedTilesY; newTile++)
+		{
+			int currentTile = generatedTilemap.at(totalGeneratedTilesX * (newTile + 1) + newTile - 1);
+			generatedTilemap.insert(generatedTilemap.begin() + totalGeneratedTilesX * (newTile + 1) + newTile, GenerateNextTile(currentTile, 1, 0));
+		}
+
+		totalGeneratedTilesX++;
+
+		maxOffsetX = offsetX;
+	}
+
+	if (offsetY < minOffsetY)
+	{
+		for (int newTile = 0; newTile < totalGeneratedTilesX; newTile++)
+		{
+			int currentTile = generatedTilemap.at(newTile * 2);
+			generatedTilemap.insert(generatedTilemap.begin() + newTile, GenerateNextTile(currentTile, 0, -1));
+		}
+
+		totalGeneratedTilesY++;
+
+		minOffsetY = offsetY;
+	}
+	else if (offsetY > maxOffsetY)
+	{
+		for (int newTile = 0; newTile < totalGeneratedTilesX; newTile++)
+		{
+			int currentTile = generatedTilemap.at(totalGeneratedTilesX * (totalGeneratedTilesY - 1) + newTile);
+			generatedTilemap.insert(generatedTilemap.end(), GenerateNextTile(currentTile, 0, 1));
+		}
+
+		totalGeneratedTilesY++;
+
+		maxOffsetY = offsetY;
+	}
+
+	DrawTileData();
+}
+
 void Mapov::ResizeMesh()
 {
 	float meshWidth, meshHeight;
@@ -222,9 +307,18 @@ void Mapov::DrawTileData()
 {
 	tilemap.resize(outputWidth, outputHeight);
 
-	for (int tile = 0; tile < generatedTilemap.size(); tile++)
+	int tile = totalGeneratedTilesX * (offsetY - minOffsetY) + (offsetX - minOffsetX);
+
+	for (int tileY = 0; tileY < generatedTilesY; tileY++)
 	{
-		DrawTile(tile, generatedTilemap.at(tile));
+		for (int tileX = 0; tileX < generatedTilesX; tileX++)
+		{
+			DrawTile(tileY * generatedTilesX + tileX, generatedTilemap.at(tile));
+
+			tile += 1;
+		}
+
+		tile += totalGeneratedTilesX - generatedTilesX;
 	}
 
 	tilemap.normalize(0, 255);
@@ -258,7 +352,7 @@ void Mapov::DrawTile(int tilePosition, int tileSprite)
 
 void Mapov::CorrectTileMap()
 {
-	int tile = rand() % generatedTilemap.size();
+	int tile = rand() % generatedTilesX * generatedTilesY + totalGeneratedTilesX * (offsetY - minOffsetY) + (offsetX - minOffsetX);
 	vector<int> incorrectTiles;
 	int correctionCount = 0;
 
@@ -347,6 +441,10 @@ void Mapov::GenerateTileMap()
 {
 	generatedTilemap.clear();
 	vector<int> availableTiles;
+	totalGeneratedTilesX = generatedTilesX;
+	totalGeneratedTilesY = generatedTilesY;
+	offsetX = minOffsetX = maxOffsetX = 0;
+	offsetY = minOffsetY = maxOffsetY = 0;
 
 	for (int tile = 0; tile < generatedTilesX * generatedTilesY; tile++)
 	{
@@ -405,9 +503,14 @@ int Mapov::GenerateNextTile(int currentTile, int x, int y)
 		}
 	}
 
-	int randomIndex = rand() % tileChances.size();
+	if (tileChances.size() > 0)
+	{
+		int randomIndex = rand() % tileChances.size();
 
-	return tileChances.at(randomIndex);
+		return tileChances.at(randomIndex);
+	}
+
+	return 0;
 }
 
 void Mapov::AnalyseTileData(int x, int y)
@@ -427,9 +530,15 @@ void Mapov::AnalyseTileData(int x, int y)
 	for (int tile = 0; tile < tilemapData.size(); tile++)
 	{
 		int currentTileIndex = tilemapData.at(tile);
-		int nextTileIndex = tilemapData.at(Constrain((tile + x + (y * tilesX)), 0, tilemapData.size() - 1));
-		int currentTileChance = tileChance.at(chanceList).at(currentTileIndex).at(nextTileIndex);
-		tileChance.at(chanceList).at(currentTileIndex)[nextTileIndex] = currentTileChance + 1;
+
+		int position = tile + x + (y * tilesX);
+
+		if (position >= 0 && position < tilemapData.size())
+		{
+			int nextTileIndex = tilemapData.at(position);
+			int currentTileChance = tileChance.at(chanceList).at(currentTileIndex).at(nextTileIndex);
+			tileChance.at(chanceList).at(currentTileIndex).at(nextTileIndex) = currentTileChance + 1;
+		}
 	}
 }
 
