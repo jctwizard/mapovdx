@@ -42,7 +42,7 @@ struct OutputType
 OutputType main(InputType input)
 {
 	OutputType output;
-	float texelSize;
+	float texelWidth, texelHeight;
     
     // Change the position vector to be 4 units for proper matrix calculations.
     input.position.w = 1.0f;
@@ -63,18 +63,19 @@ OutputType main(InputType input)
     output.normal = normalize(output.normal);
 
 	// Determine the floating point size of a texel for a screen with this specific height.
-	texelSize = 1.0f / textureHeight;
+	texelWidth = 1.0f / textureWidth;
+	texelHeight = 1.0f / textureHeight;
 
 	// Create UV coordinates for the pixel and its four vertical neighbors on either side.
-	output.texCoord1 = input.tex + float2(texelSize * -1.0f, texelSize * -1.0f);
-	output.texCoord2 = input.tex + float2(texelSize * -1.0f, texelSize * 0.0f);
-	output.texCoord3 = input.tex + float2(texelSize * -1.0f, texelSize * 1.0f);
-	output.texCoord4 = input.tex + float2(texelSize * 0.0f, texelSize * -1.0f);
-	output.texCoord5 = input.tex + float2(texelSize * 0.0f, texelSize *  0.0f);
-	output.texCoord6 = input.tex + float2(texelSize * 0.0f, texelSize *  1.0f);
-	output.texCoord7 = input.tex + float2(texelSize * 1.0f, texelSize *  -1.0f);
-	output.texCoord8 = input.tex + float2(texelSize * 1.0f, texelSize *  0.0f);
-	output.texCoord9 = input.tex + float2(texelSize * 1.0f, texelSize *  1.0f);
+	output.texCoord1 = input.tex + float2(texelWidth * -1.0f, texelHeight * -1.0f);
+	output.texCoord2 = input.tex + float2(texelWidth * -1.0f, texelHeight * 0.0f);
+	output.texCoord3 = input.tex + float2(texelWidth * -1.0f, texelHeight * 1.0f);
+	output.texCoord4 = input.tex + float2(texelWidth * 0.0f, texelHeight * -1.0f);
+	output.texCoord5 = input.tex + float2(texelWidth * 0.0f, texelHeight *  0.0f);
+	output.texCoord6 = input.tex + float2(texelWidth * 0.0f, texelHeight *  1.0f);
+	output.texCoord7 = input.tex + float2(texelWidth * 1.0f, texelHeight *  -1.0f);
+	output.texCoord8 = input.tex + float2(texelWidth * 1.0f, texelHeight *  0.0f);
+	output.texCoord9 = input.tex + float2(texelWidth * 1.0f, texelHeight *  1.0f);
 
 	output.effectFlags = effectFlags;
 

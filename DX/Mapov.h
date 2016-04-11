@@ -11,7 +11,6 @@
 #include "CImg.h"
 
 #include "OrthoMesh.h"
-#include "HBlurShader.h"
 #include "ProcessShader.h"
 #include "RenderTexture.h"
 
@@ -23,6 +22,7 @@
 #define EFFECT_BLUR			0x01
 #define EFFECT_EDGEDETECT	0x02
 #define EFFECT_POSTERISE	0x04
+#define EFFECT_INVERT		0x08
 
 #define PI 3.14159265359
 
@@ -64,20 +64,17 @@ private:
 	bool justGenerated;
 	bool justCorrected;
 
+	CImg<int> originalTilemap;
 	CImg<int> tilemap;
 	CImgDisplay window;
 	vector<int> storedTiles, storedPixelSums, tilemapData, generatedTilemap;
-	vector<CImg<int>> tileSprites;
 	vector<vector<vector<int>>> tileChance;
 
 	int Constrain(int value, int lower, int upper);
 	bool HasValue(vector<int> list, int value);
 
-	HBlurShader* m_HBlurShader;
 	ProcessShader* m_ProcessShader;
-	OrthoMesh* m_ScreenMesh;
 	OrthoMesh* m_Mesh;
-	RenderTexture* m_RenderTexture;
 	Texture* m_Texture;
 
 	int effectFlags;

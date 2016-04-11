@@ -13,15 +13,15 @@ Mapov::Mapov(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, 
 	justCorrected = false;
 
 	// Create Mesh object
-	string filename = "../res/pallet_town.png";
-	tileSize = 16;
+	string filename = "../res/zelda_overworld.jpg";
+	tileSize = 32;
 	outputWidth = 512;
 	outputHeight = 512;
-	markovRadius = 3;
+	markovRadius = 1;
 	corrections = 100;
 
 	tilemap = CImg<int>(filename.c_str());
-	window = CImgDisplay(CImg<unsigned char>(tilemap), "Mapov");
+	originalTilemap = CImg<int>(tilemap);
 
 	tilesX = tilemap.width() / tileSize;
 	tilesY = tilemap.height() / tileSize;
@@ -47,20 +47,21 @@ Mapov::Mapov(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, 
 		{
 			if (x == 0 && y == 0) continue;
 
+			cout << "\rAnalysing tile offset " << x << ", " << y << "   ";
+
 			tileChance.push_back(vector<vector<int>>());
 			AnalyseTileData(x, y);
 		}
 	}
+
+	cout << endl << "\nSuccess!" << endl << "\nControls:\nSpace:\tGenerate,\nC:\tCorrect,\n1-4:\tFilters,\n0:\tReset filters";
 
 	tilemap.normalize(0, 255);
 	tilemap.save("../res/GeneratedTilemap.png");
 
 	ResizeMesh();
 
-	m_RenderTexture = new RenderTexture(m_Direct3D->GetDevice(), screenWidth, screenHeight, 0.0f, 1000.0f);
-	m_ScreenMesh = new OrthoMesh(m_Direct3D->GetDevice(), screenWidth, screenHeight, 0, 0);
 	m_Texture = new Texture(m_Direct3D->GetDevice(), L"../res/GeneratedTilemap.png");
-	m_HBlurShader = new HBlurShader(m_Direct3D->GetDevice(), hwnd);
 	m_ProcessShader = new ProcessShader(m_Direct3D->GetDevice(), hwnd);
 }
 
@@ -74,12 +75,6 @@ Mapov::~Mapov()
 	{
 		delete m_Mesh;
 		m_Mesh = 0;
-	}
-
-	if (m_HBlurShader)
-	{
-		delete m_HBlurShader;
-		m_HBlurShader = 0;
 	}
 
 	if (m_ProcessShader)
@@ -148,6 +143,10 @@ bool Mapov::Frame()
 	{
 		effectFlags |= EFFECT_POSTERISE;
 	}
+	if (m_Input->isKeyDown('4'))
+	{
+		effectFlags |= EFFECT_INVERT;
+	}
 	// Clear effects
 	if (m_Input->isKeyDown('0'))
 	{
@@ -179,45 +178,14 @@ bool Mapov::Render()
 	m_Camera->GetBaseViewMatrix(baseViewMatrix);
 	m_Direct3D->GetOrthoMatrix(orthoMatrix);
 
-	if (false && (effectFlags & EFFECT_EDGEDETECT) == EFFECT_EDGEDETECT ||
-		(effectFlags & EFFECT_BLUR) == EFFECT_BLUR)
-	{
-		// Horizontal Blur on render texture
-		m_RenderTexture->SetRenderTarget(m_Direct3D->GetDeviceContext());
+	// Send mesh data again
+	m_Mesh->SendData(m_Direct3D->GetDeviceContext());
 
-		// Clear the render to texture.
-		m_RenderTexture->ClearRenderTarget(m_Direct3D->GetDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
+	// Set shader parameters (matrices and texture) using render texture
+	m_ProcessShader->SetShaderParameters(m_Direct3D->GetDeviceContext(), worldMatrix, baseViewMatrix, orthoMatrix, m_Texture->GetTexture(), tilemap.width(), tilemap.height(), effectFlags);
 
-		// Send geometry data (from mesh)
-		m_ScreenMesh->SendData(m_Direct3D->GetDeviceContext());
-
-		// Render horizontally blurred image to texture
-		m_HBlurShader->SetShaderParameters(m_Direct3D->GetDeviceContext(), worldMatrix, baseViewMatrix, orthoMatrix, m_Texture->GetTexture(), tilemap.width(), tilemap.height());
-		m_HBlurShader->Render(m_Direct3D->GetDeviceContext(), m_ScreenMesh->GetIndexCount());
-
-		// Reset rendering to window
-		m_Direct3D->SetBackBufferRenderTarget();
-
-		// Send mesh data again
-		m_Mesh->SendData(m_Direct3D->GetDeviceContext());
-
-		// Set shader parameters (matrices and texture) using render texture
-		m_ProcessShader->SetShaderParameters(m_Direct3D->GetDeviceContext(), worldMatrix, baseViewMatrix, orthoMatrix, m_RenderTexture->GetShaderResourceView(), m_RenderTexture->GetTextureWidth(), m_RenderTexture->GetTextureHeight(), effectFlags);
-
-		// Render object (combination of mesh geometry and shader process
-		m_ProcessShader->Render(m_Direct3D->GetDeviceContext(), m_Mesh->GetIndexCount());
-	}
-	else
-	{
-		// Send mesh data again
-		m_Mesh->SendData(m_Direct3D->GetDeviceContext());
-
-		// Set shader parameters (matrices and texture) using render texture
-		m_ProcessShader->SetShaderParameters(m_Direct3D->GetDeviceContext(), worldMatrix, baseViewMatrix, orthoMatrix, m_Texture->GetTexture(), tilemap.width(), tilemap.height(), effectFlags);
-
-		// Render object (combination of mesh geometry and shader process
-		m_ProcessShader->Render(m_Direct3D->GetDeviceContext(), m_Mesh->GetIndexCount());
-	}
+	// Render object (combination of mesh geometry and shader process
+	m_ProcessShader->Render(m_Direct3D->GetDeviceContext(), m_Mesh->GetIndexCount());
 	
 	// Present the rendered scene to the screen.
 	m_Direct3D->EndScene();
@@ -273,7 +241,19 @@ void Mapov::DrawTile(int tilePosition, int tileSprite)
 	int drawPixelX = (tilePosition % generatedTilesX) * tileSize;
 	int drawPixelY = (tilePosition / generatedTilesX) * tileSize;
 
-	tilemap.draw_image(drawPixelX, drawPixelY, 0, tileSprites.at(tileSprite));
+	int sprite = storedTiles.at(tileSprite);
+	int baseSpritePixelX = (sprite % tilesX) * tileSize;
+	int baseSpritePixelY = (sprite / tilesX) * tileSize;
+	
+	for (int pixelY = 0; pixelY < tileSize; pixelY++)
+	{
+		for (int pixelX = 0; pixelX < tileSize; pixelX++)
+		{
+			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, RED) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, RED);
+			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, GREEN) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, GREEN);
+			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, BLUE) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, BLUE);
+		}
+	}
 }
 
 void Mapov::CorrectTileMap()
@@ -478,30 +458,30 @@ void Mapov::GenerateTileData()
 			{
 				storedTiles.push_back(tileY * tilesX + tileX);
 				storedPixelSums.push_back(pixelSum);
-				CImg<int> sprite = tilemap;
-				tileSprites.push_back(sprite.crop(tileX * tileSize, tileY * tileSize, tileX * tileSize + tileSize, tileY * tileSize + tileSize));
 				tileID = storedTiles.size() - 1;
 			}
 
 			tilemapData.push_back(tileID);
 		}
-	}
 
-	cout << "duplicate tiles: " << duplicateTiles << "\n";
-	cout << "stored tiles: " << storedTiles.size() << "\n";
+		cout << "\rGenerated data for row " << tileY + 1 << "/" << tilesY;
+	}
+	cout << "\nDuplicate tiles: " << duplicateTiles << "\n";
+	cout << "Stored tiles: " << storedTiles.size() << "\n";
 }
 
 int Mapov::SumPixels(int tileX, int tileY)
 {
 	int sum = 0;
-	CImg<int> tilePixels = tilemap;
-	tilePixels.crop(tileX * tileSize, tileY * tileSize, tileX * tileSize + tileSize, tileY * tileSize + tileSize);
+
+	int basePixelX = tileX * tileSize;
+	int basePixelY = tileY * tileSize;
 
 	for (int pixelY = 0; pixelY < tileSize; pixelY++)
 	{
 		for (int pixelX = 0; pixelX < tileSize; pixelX++)
 		{
-			sum += (tilePixels(pixelX, pixelY, 0, RED) + tilePixels(pixelX, pixelY, 0, GREEN) + tilePixels(pixelX, pixelY, 0, BLUE)) * pixelX * pixelY;
+			sum += (tilemap(basePixelX + pixelX, basePixelY + pixelY, 0, RED) + tilemap(basePixelX + pixelX, basePixelY + pixelY, 0, GREEN) + tilemap(basePixelX + pixelX, basePixelY + pixelY, 0, BLUE)) * pixelX * pixelY;
 		}
 	}
 

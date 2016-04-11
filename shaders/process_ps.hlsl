@@ -7,6 +7,7 @@ SamplerState Sampler0 : register(s0);
 #define EFFECT_BLUR			0x01
 #define EFFECT_EDGEDETECT	0x02
 #define EFFECT_POSTERISE	0x04
+#define EFFECT_INVERT		0x08
 
 struct InputType
 {
@@ -48,15 +49,17 @@ float4 main(InputType input) : SV_TARGET
 		blurredColour = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
 		// Add the nine vertical pixels to the colour by the specific weight of each.
-		blurredColour += texture0.Sample(Sampler0, input.texCoord1) * weight0;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord2) * weight1;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord3) * weight2;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord4) * weight3;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord5) * weight4;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord6) * weight3;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord7) * weight2;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord8) * weight1;
-		blurredColour += texture0.Sample(Sampler0, input.texCoord9) * weight0;
+		blurredColour += texture0.Sample(Sampler0, input.texCoord1);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord2);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord3);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord4);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord5);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord6);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord7);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord8);
+		blurredColour += texture0.Sample(Sampler0, input.texCoord9);
+		
+		blurredColour /= 9;
 
 		colour = blurredColour;
 	}
@@ -95,6 +98,10 @@ float4 main(InputType input) : SV_TARGET
 			floor(originalColour.g * (float(colourCount) - 0.01f)) / colourCount * (1 - value),
 			floor(originalColour.b * (float(colourCount) - 0.01f)) / colourCount * (1 - value),
 			1.0f);
+	}
+	if ((input.effectFlags & EFFECT_INVERT) == EFFECT_INVERT)
+	{
+		colour = float4(1.0f - colour.r, 1.0f - colour.g, 1.0f - colour.b, 1.0f);
 	}
 
 	return colour;
