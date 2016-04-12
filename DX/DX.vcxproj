@@ -97,6 +97,7 @@
     <ClCompile Include="CubeMesh.cpp" />
     <ClCompile Include="D3D.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="makesomenoise.cpp" />
     <ClCompile Include="Mapov.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -125,6 +126,7 @@
     <ClInclude Include="CubeMesh.h" />
     <ClInclude Include="D3D.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="makesomenoise.h" />
     <ClInclude Include="Mapov.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Model.h" />

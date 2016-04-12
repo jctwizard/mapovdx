@@ -1,12 +1,8 @@
 // Main.cpp
 #include "System.h"
-#include "Console.h"
-
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pScmdline, int iCmdshow)
 {
-	RedirectIOToConsole();
-
 	System* m_System;
 		
 	// Create the system object.

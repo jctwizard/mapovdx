@@ -108,6 +108,9 @@
     <ClCompile Include="ProcessShader.cpp">
       <Filter>Source Files\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="makesomenoise.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -184,6 +187,9 @@
     </ClInclude>
     <ClInclude Include="ProcessShader.h">
       <Filter>Source Files\Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="makesomenoise.h">
+      <Filter>Source Files\System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

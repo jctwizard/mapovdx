@@ -4,6 +4,7 @@
 
 // Includes
 #include <iostream>
+#include "Shlwapi.h"
 #include <vector>
 #include <string>
 
@@ -13,6 +14,9 @@
 #include "OrthoMesh.h"
 #include "ProcessShader.h"
 #include "RenderTexture.h"
+#include "makesomenoise.h"
+
+#include "Console.h"
 
 #define RED 0
 #define GREEN 1
@@ -40,6 +44,20 @@ public:
 	bool Frame();
 
 private:
+	inline bool FileExists(const std::string& name) 
+	{
+		ifstream f(name.c_str());
+		if (f.good()) {
+			f.close();
+			return true;
+		}
+		else {
+			f.close();
+			return false;
+		}
+	}
+
+	void Init();
 	bool Render();
 	void UpdateTilemap();
 	void GenerateTileData();
@@ -65,7 +83,6 @@ private:
 
 	CImg<int> originalTilemap;
 	CImg<int> tilemap;
-	CImgDisplay window;
 	vector<int> storedTiles, storedPixelSums, tilemapData, generatedTilemap;
 	vector<vector<vector<int>>> tileChance;
 
@@ -80,6 +97,10 @@ private:
 
 	int offsetX, minOffsetX, maxOffsetX;
 	int offsetY, minOffsetY, maxOffsetY;
+
+	bool addNoise;
+
+	MakeSomeNoise NoiseMaker;
 };
 
 #endif

@@ -4,62 +4,12 @@
 
 Mapov::Mapov(HINSTANCE hinstance, HWND hwnd, int screenWidth, int screenHeight, Input *in) : BaseApplication(hinstance, hwnd, screenWidth, screenHeight, in)
 {
-	effectFlags = EFFECT_NONE;
+	RedirectIOToConsole();
 
 	this->screenWidth = screenWidth;
 	this->screenHeight = screenHeight;
 
-	offsetX = minOffsetX = maxOffsetX = 0;
-	offsetY = minOffsetY = maxOffsetY = 0;
-
-	// Create Mesh object
-	string filename = "../res/pallet_town.png";
-	tileSize = 32;
-	outputWidth = 512;
-	outputHeight = 512;
-	markovRadius = 1;
-	corrections = 100;
-
-	tilemap = CImg<int>(filename.c_str());
-	originalTilemap = CImg<int>(tilemap);
-
-	tilesX = tilemap.width() / tileSize;
-	tilesY = tilemap.height() / tileSize;
-
-	if (outputWidth == -1)
-	{
-		outputWidth = tilemap.width();
-	}
-	if (outputHeight == -1)
-	{
-		outputHeight = tilemap.height();
-	}
-
-	generatedTilesX = totalGeneratedTilesX = outputWidth / tileSize;
-	generatedTilesY = totalGeneratedTilesY = outputHeight / tileSize;
-
-	GenerateTileData();
-
-	// Analyse data in all directions for the markov radius
-	for (int x = -markovRadius; x <= markovRadius; x++)
-	{
-		for (int y = -markovRadius; y <= markovRadius; y++)
-		{
-			if (x == 0 && y == 0) continue;
-
-			cout << "\rAnalysing tile offset " << x << ", " << y << "   ";
-
-			tileChance.push_back(vector<vector<int>>());
-			AnalyseTileData(x, y);
-		}
-	}
-
-	cout << endl << "\nSuccess!" << endl << "\nControls:\nSpace:\tGenerate,\nC:\tCorrect,\n1-4:\tFilters,\n0:\tReset filters";
-
-	tilemap.normalize(0, 255);
-	tilemap.save("../res/GeneratedTilemap.png");
-
-	ResizeMesh();
+	Init();
 
 	m_Texture = new Texture(m_Direct3D->GetDevice(), L"../res/GeneratedTilemap.png");
 	m_ProcessShader = new ProcessShader(m_Direct3D->GetDevice(), hwnd);
@@ -82,6 +32,105 @@ Mapov::~Mapov()
 		delete m_ProcessShader;
 		m_ProcessShader = 0;
 	}
+}
+
+void Mapov::Init()
+{
+	addNoise = false;
+
+	effectFlags = EFFECT_NONE;
+
+	offsetX = minOffsetX = maxOffsetX = 0;
+	offsetY = minOffsetY = maxOffsetY = 0;
+
+	// Create Mesh object
+	string filename;
+
+	cout << "\n\nMAPOV DX\n--------\n\n";
+
+	string easySetup;
+	cout << "Would you like to use the easy set up? (Y/N): ";
+	cin >> easySetup;
+
+	if (easySetup == "y" || easySetup == "Y" || easySetup == "yes" || easySetup == "Yes" || easySetup == "YES")
+	{
+		filename = "../res/pallet_town.png";
+		tileSize = 32;
+		markovRadius = 3;
+		outputWidth = 1024;
+		outputHeight = 512;
+	}
+	else
+	{
+		cout << "\n\nPlease input the image path to process (e.g. '../res/pallet_town.png'): \n";
+		cin >> filename;
+		cout << "\nNext the pixel size of the tiles to process (e.g. 16, 32): ";
+		cin >> tileSize;
+		cout << "\nThe degree of markov chain analysis (1-5): ";
+		cin >> markovRadius;
+		cout << "\nNow the width of the image to output: ";
+		cin >> outputWidth;
+		cout << "\nAnd lastly the height: ";
+		cin >> outputHeight;
+	}
+
+	cout << endl << endl;
+
+	corrections = 100;
+
+	while (!FileExists(filename))
+	{
+		cout << "\n\nThe image path given was incorrect please try again (e.g. '../res/pallet_town.png'): \n";
+		cin >> filename;
+	}
+
+	tilemap = CImg<int>(filename.c_str());
+	originalTilemap = CImg<int>(tilemap);
+
+	tilesX = tilemap.width() / tileSize;
+	tilesY = tilemap.height() / tileSize;
+
+	if (outputWidth == -1)
+	{
+		outputWidth = tilemap.width();
+	}
+	if (outputHeight == -1)
+	{
+		outputHeight = tilemap.height();
+	}
+
+	generatedTilesX = totalGeneratedTilesX = outputWidth / tileSize;
+	generatedTilesY = totalGeneratedTilesY = outputHeight / tileSize;
+
+	storedTiles.clear();
+	storedPixelSums.clear();
+	tilemapData.clear();
+	generatedTilemap.clear();
+
+	GenerateTileData();
+
+	tileChance.clear();
+
+	// Analyse data in all directions for the markov radius
+	for (int x = -markovRadius; x <= markovRadius; x++)
+	{
+		for (int y = -markovRadius; y <= markovRadius; y++)
+		{
+			if (x == 0 && y == 0) continue;
+
+			cout << "\rAnalysing tile offset " << x << ", " << y << "   ";
+
+			tileChance.push_back(vector<vector<int>>());
+			AnalyseTileData(x, y);
+		}
+	}
+
+	cout << endl << "\nSuccess!" << endl << "\nControls:\nSpace:\tGenerate,\nC:\tCorrect,\n1-4:\tFilters,\n0:\tReset filters";
+
+	tilemap.normalize(0, 255);
+	tilemap.save("../res/GeneratedTilemap.png");
+
+	ResizeMesh();
 }
 
 
@@ -116,6 +165,13 @@ bool Mapov::Frame()
 		m_Input->SetKeyUp('C');
 	}
 
+	if (m_Input->isKeyDown('R'))
+	{
+		Init();
+
+		m_Input->SetKeyUp('R');
+	}
+
 	// Set effects
 	if (m_Input->isKeyDown('1'))
 	{
@@ -137,11 +193,23 @@ bool Mapov::Frame()
 		effectFlags |= EFFECT_INVERT;
 		m_Input->SetKeyUp('4');
 	}
+
 	// Clear effects
 	if (m_Input->isKeyDown('0'))
 	{
 		effectFlags = EFFECT_NONE;
+		DrawTileData();
 		m_Input->SetKeyUp('0');
+	}
+
+	// Add Noise
+	if (m_Input->isKeyDown('N'))
+	{
+		addNoise = !addNoise;
+
+		DrawTileData();
+
+		m_Input->SetKeyUp('N');
 	}
 
 	// Pan around
@@ -343,16 +411,26 @@ void Mapov::DrawTile(int tilePosition, int tileSprite)
 	{
 		for (int pixelX = 0; pixelX < tileSize; pixelX++)
 		{
-			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, RED) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, RED);
-			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, GREEN) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, GREEN);
-			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, BLUE) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, BLUE);
+			float noise = 0.0f;
+
+			if (addNoise)
+			{
+				noise = NoiseMaker.Simplex((drawPixelX + pixelX) * 0.01f, (drawPixelY + pixelY) * 0.01f);
+			}
+
+			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, RED) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, RED) + noise * 255 * 0.333f;
+			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, GREEN) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, GREEN) + noise * 255 * 0.333f;
+			tilemap(drawPixelX + pixelX, drawPixelY + pixelY, 0, BLUE) = originalTilemap(baseSpritePixelX + pixelX, baseSpritePixelY + pixelY, 0, BLUE) + noise * 255 * 0.333f;
 		}
 	}
 }
 
 void Mapov::CorrectTileMap()
 {
-	int tile = rand() % generatedTilesX * generatedTilesY + totalGeneratedTilesX * (offsetY - minOffsetY) + (offsetX - minOffsetX);
+	int tileX = rand() % generatedTilesX;
+	int tileY = rand() % generatedTilesY;
+	int tile = totalGeneratedTilesX * (tileY + (offsetY - minOffsetY)) + (tileX + (offsetX - minOffsetX));
+
 	vector<int> incorrectTiles;
 	int correctionCount = 0;
 
@@ -378,7 +456,9 @@ void Mapov::CorrectTileMap()
 
 		if (incorrectTiles.size() == 0)
 		{
-			tile = rand() % generatedTilemap.size();
+			tileX = rand() % generatedTilesX;
+			tileY = rand() % generatedTilesY;
+			tile = totalGeneratedTilesX * (tileY + (offsetY - minOffsetY)) + (tileX + (offsetX - minOffsetX));
 		}
 		else
 		{
