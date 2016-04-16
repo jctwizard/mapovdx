@@ -111,6 +111,9 @@
     <ClCompile Include="makesomenoise.cpp">
       <Filter>Source Files\System</Filter>
     </ClCompile>
+    <ClCompile Include="TilemapGenerator.cpp">
+      <Filter>Source Files\Applications</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -190,6 +193,9 @@
     </ClInclude>
     <ClInclude Include="makesomenoise.h">
       <Filter>Source Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="TilemapGenerator.h">
+      <Filter>Source Files\Applications</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
